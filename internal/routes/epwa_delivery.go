@@ -250,6 +250,16 @@ func artifactHasBlockedAssets(manifest evidenceartifact.Manifest) bool {
 	return false
 }
 
+// epwaUnsealedAllowed reports whether this response may serve its content inline
+// because the caller supplied no evidence scope at all and the operator opted in
+// via evidence.epwa.unsealed_no_scope. A present-but-incomplete scope is never
+// unsealed: that caller attempted evidence binding and must reconcile.
+func epwaUnsealedAllowed(cfg *config.Config, scope evidenceshare.Scope) bool {
+	return cfg.EpwaUnsealedNoScope() && scope.Empty()
+}
+
+const epwaUnsealedReason = "no_evidence_scope_supplied: content served without EPWA publication; not sealed evidence"
+
 func epwaDeliveryRoot(cfg *config.Config) string {
 	if cfg != nil && strings.TrimSpace(cfg.Storage.DataDir) != "" {
 		return cfg.Storage.DataDir
@@ -275,6 +285,14 @@ func writeSessionSnapshot(w http.ResponseWriter, req *http.Request, cfg *config.
 	if delivery.State == epwadelivery.StateReady {
 		response["artifact_url"] = delivery.EPWA.RecordURL
 		response["portable_url"] = delivery.EPWA.PortableURL
+	}
+	if delivery.State != epwadelivery.StateReady && epwaUnsealedAllowed(cfg, evidenceScopeFromSession(sess)) {
+		// Operator opted into unsealed delivery for scope-less callers. Nothing is
+		// published and no EPWA URLs are minted; delivery_state still reports the
+		// non-ready truth.
+		response["screenshot"] = snap.Screenshot
+		response["inline_posture"] = "unsealed_no_epwa_scope"
+		response["epwa_unsealed_reason"] = epwaUnsealedReason
 	}
 	if snap.DOM != nil {
 		response["dom_posture"] = "withheld_pending_epwa_projection"

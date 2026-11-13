@@ -251,6 +251,17 @@ storage:
   data_dir: "/home/wpuiai/uiai-engine/data"
   usage_file: "usage.json"
 
+# EPWA (Evidence PWA) delivery posture for captured artifacts.
+# Default is fail-closed: content is withheld unless delivery is ready.
+evidence:
+  epwa:
+    # Opt-in. When true, an artifact captured with NO evidence scope at all is
+    # returned inline as "unsealed_no_epwa_scope" instead of being withheld.
+    # Delivery state stays non-ready and no EPWA URLs are minted, so the
+    # response never claims sealed evidence. A present-but-incomplete scope
+    # still takes the strict reconcile path. Keep false for sealed evidence.
+    unsealed_no_scope: false
+
 # Project-scoped Evidence PWA registry. Provider observations remain
 # focusa_binding_pending until exact Focusa/artifact revisions reconcile.
 evidence_registry:

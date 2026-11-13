@@ -2,6 +2,7 @@ package routes
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -228,6 +229,13 @@ func MountScreenshotReal(r chi.Router, cfg *config.Config, pool vision.PoolSourc
 		}
 		if body.Inline != nil && *body.Inline {
 			response["inline_posture"] = "withheld_by_mandatory_epwa_delivery"
+		}
+		if delivery.State != epwadelivery.StateReady && epwaUnsealedAllowed(cfg, shareInput.Scope) {
+			// Operator opted into unsealed delivery for scope-less callers; overrides
+			// the withheld posture set above. Delivery stays non-ready and truthful.
+			response["screenshot"] = base64.StdEncoding.EncodeToString(result.Data)
+			response["inline_posture"] = "unsealed_no_epwa_scope"
+			response["epwa_unsealed_reason"] = epwaUnsealedReason
 		}
 		if result.DOMReport != "" {
 			response["dom_report_posture"] = "withheld_pending_epwa_projection"

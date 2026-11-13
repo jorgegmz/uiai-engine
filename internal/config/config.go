@@ -24,7 +24,28 @@ type Config struct {
 	Captcha          CaptchaYAML            `yaml:"captcha"`
 	TwoFactor        TwoFactorConfig        `yaml:"two_factor"`
 	EvidenceRegistry EvidenceRegistryConfig `yaml:"evidence_registry"`
+	Evidence         EvidenceConfig         `yaml:"evidence"`
 	Search           SearchConfig           `yaml:"search"`
+}
+
+// EvidenceConfig governs EPWA (Evidence PWA) delivery behavior for captured
+// artifacts. It exists so operators can opt out of withholding content for
+// callers that supplied no evidence scope at all, without weakening the
+// fail-closed default for callers that attempted evidence binding.
+type EvidenceConfig struct {
+	EPWA EPWAConfig `yaml:"epwa"`
+}
+
+// EPWAConfig controls the EPWA delivery posture.
+//
+// UnsealedNoScope is opt-in and defaults to false. When true, an artifact
+// captured with NO evidence scope (see evidenceshare.Scope.Empty) is returned
+// inline as unsealed instead of being withheld, mirroring the existing generic
+// JSON artifact behavior. Delivery state remains non-ready and no EPWA URLs are
+// minted, so the response never claims sealed evidence. A present-but-incomplete
+// scope keeps the strict reconcile path regardless of this setting.
+type EPWAConfig struct {
+	UnsealedNoScope bool `yaml:"unsealed_no_scope"`
 }
 
 // SearchConfig makes search providers and their credentials operator-configurable
@@ -254,6 +275,12 @@ type EvidenceRegistryConfig struct {
 	MaxProjects          int           `yaml:"max_projects"`
 	MaxItems             int           `yaml:"max_items"`
 	ReconcileInterval    time.Duration `yaml:"reconcile_interval"`
+}
+
+// EpwaUnsealedNoScope reports whether the operator opted into serving artifacts
+// inline when the caller supplied no evidence scope at all.
+func (c *Config) EpwaUnsealedNoScope() bool {
+	return c != nil && c.Evidence.EPWA.UnsealedNoScope
 }
 
 type StorageConfig struct {
